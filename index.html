@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Web Apps</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --bg-base: #24273a;
+            --bg-surface: #1e2030;
+            --border-color: #363a4f;
+            --text-main: #cad3f5;
+            --text-muted: #b8c0e0;
+            --accent: #8aadf4;
+            --accent-alt: #a6da95;
+            --accent-soft: #b7bdf8;
+            --radius: 18px;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-base);
+            color: var(--text-main);
+            font-family: system-ui, sans-serif;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+            padding: 40px 20px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 35px;
+            color: var(--accent-soft);
+            animation: fadeIn 0.8s ease;
+        }
+
+        /* GRID */
+        .webapp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 22px;
+        }
+
+        /* CARD */
+        .webapp-card {
+            background: var(--bg-surface);
+            padding: 22px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            transition: 0.35s ease;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+            animation: fadeUp 0.6s ease both;
+        }
+
+        .webapp-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        }
+
+        .webapp-card__icon {
+            font-size: 32px;
+            color: var(--accent);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .webapp-card__title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 8px;
+            color: var(--accent-soft);
+        }
+
+        .webapp-card__desc {
+            font-size: 14px;
+            margin: 0 0 18px;
+            color: var(--text-muted);
+        }
+
+        .webapp-card__btn {
+            background: var(--accent);
+            padding: 9px 14px;
+            border-radius: var(--radius);
+            text-decoration: none;
+            color: #1e2030;
+            font-weight: 600;
+            transition: 0.25s ease;
+            display: inline-block;
+        }
+
+        .webapp-card__btn:hover {
+            background: var(--accent-alt);
+        }
+
+        /* Animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1 class="section-title">Web Apps</h1>
+        <div id="webappGrid" class="webapp-grid"></div>
+    </div>
+
+    <script>
+        const webapps = [
+           
+           
+            {
+                icon: "bi-receipt",
+                title: "Raja Rani",
+                desc: "Raja rani games",
+                link: "rajarani",
+                btn: "Play"
+            },
+            {
+                icon: "bi-",
+                title: "",
+                desc: "",
+                link: "",
+                btn: "wait"
+            }
+        ];
+
+        const grid = document.getElementById("webappGrid");
+
+        webapps.forEach((app, index) => {
+            grid.innerHTML += `
+                <div class="webapp-card" style="animation-delay:${index * 0.08}s">
+                    <i class="webapp-card__icon ${app.icon}"></i>
+                    <h3 class="webapp-card__title">${app.title}</h3>
+                    <p class="webapp-card__desc">${app.desc}</p>
+                    <a href="${app.link}" class="webapp-card__btn">${app.btn}</a>
+                </div>`;
+        });
+    </script>
+
+</body>
+
+</html>
+
