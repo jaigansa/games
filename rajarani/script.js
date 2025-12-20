@@ -1,97 +1,114 @@
 let players = JSON.parse(localStorage.getItem('rr_players')) || [];
-let currentRound = 1, totalRounds = 5, assignedRoles = [], currentTurn = 0, timerInterval, selectedSuspect = null;
+let currentRound = parseInt(localStorage.getItem('rr_curRnd')) || 1;
+let totalRounds = parseInt(localStorage.getItem('rr_totalRnd')) || 5;
+let currentScreen = localStorage.getItem('rr_screen') || 'roundSetup';
+let assignedRoles = JSON.parse(localStorage.getItem('rr_roles')) || [];
+let currentTurn = parseInt(localStorage.getItem('rr_turn')) || 0;
+let soundEnabled = localStorage.getItem('rr_sound') !== 'false';
+let timerInterval, selectedSuspect = null;
+let policeTimeLimit = parseInt(localStorage.getItem('rr_timer')) || 30;
 
-const playSnd = (id) => { const s = document.getElementById(id); if(s) { s.currentTime = 0; s.play().catch(()=>{}); } };
+const save = () => {
+    localStorage.setItem('rr_players', JSON.stringify(players));
+    localStorage.setItem('rr_curRnd', currentRound);
+    localStorage.setItem('rr_totalRnd', totalRounds);
+    localStorage.setItem('rr_timer', policeTimeLimit); // <--- ADD THIS LINE
+    localStorage.setItem('rr_screen', currentScreen);
+    localStorage.setItem('rr_roles', JSON.stringify(assignedRoles));
+    localStorage.setItem('rr_turn', currentTurn);
+    localStorage.setItem('rr_sound', soundEnabled);
+};
+
+const playSnd = (id) => { if(!soundEnabled) return; const s = document.getElementById(id); if(s) { s.currentTime = 0; s.play().catch(()=>{}); } };
 const stopSnd = (id) => { const s = document.getElementById(id); if(s) { s.pause(); s.currentTime = 0; } };
 
-function save() { localStorage.setItem('rr_players', JSON.stringify(players)); }
-
-// --- UI MODALS ---
-function toggleInfoModal() { document.getElementById('infoModal').classList.toggle('hidden'); }
-
-function toggleScoreModal() {
-    const m = document.getElementById('scoreModal');
-    if(m.classList.contains('hidden')) {
-        const sorted = [...players].sort((a,b) => b.score - a.score);
-        document.getElementById('modalScoreList').innerHTML = sorted.map(p => `
-            <div class="bg-slate-900/40 p-5 rounded-3xl border border-slate-800">
-                <div class="flex justify-between items-center mb-3">
-                    <span class="font-bold uppercase text-xs tracking-widest">${p.name}</span>
-                    <span class="text-yellow-500 font-mono font-bold">${p.score} <span class="text-[8px] opacity-50">PTS</span></span>
-                </div>
-                <div class="flex gap-2 overflow-x-auto no-scrollbar">
-                    ${(p.history || []).map(h => `<span class="history-dot">${h}</span>`).join('') || '<span class="italic text-[10px] opacity-30">No history</span>'}
-                </div>
-            </div>`).join('');
-        m.classList.remove('hidden');
-    } else m.classList.add('hidden');
-}
-
-// --- SYSTEM ---
-function fullReset() {
-    if(confirm("RESTART EVERYTHING? All players and scores will be deleted.")) {
-        localStorage.clear();
-        location.reload();
+window.onload = () => {
+    if (players.length > 0) {
+        showScreen(currentScreen);
+        renderPlayerList();
+        if (currentScreen === 'passwordScreen') prepareTurn();
     }
-}
-function shareResults() {
-    const sorted = [...players].sort((a,b) => b.score - a.score);
-    const gameUrl = window.location.href; // Automatically gets your current game link
+};
+
+function showScreen(id) {
+    currentScreen = id;
+    ['roundSetup', 'setup', 'passwordScreen', 'policeScreen', 'celebrationScreen'].forEach(s => document.getElementById(s)?.classList.add('hidden'));
+    document.getElementById(id)?.classList.remove('hidden');
     
-    let text = "👑 *RAJA RANI EMPIRE STANDINGS* 👑\n\n";
-    
-    sorted.forEach((p, i) => {
-        const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "👤";
-        text += `${medal} ${p.name}: ${p.score} Pts\n`;
-    });
-    
-    text += `\n🎮 Play here: ${gameUrl}`;
-    
-    if (navigator.share) {
-        navigator.share({
-            title: 'Empire Standings',
-            text: text,
-            url: gameUrl // Some apps use the dedicated URL field
-        }).catch((error) => console.log('Error sharing', error));
+    // Scoreboard 🏆 Visibility
+    const btn = document.getElementById('matchScoreBtn');
+    if (['passwordScreen', 'policeScreen', 'celebrationScreen'].includes(id) || (id === 'setup' && players.length > 0)) {
+        btn.classList.remove('hidden'); btn.classList.add('flex');
     } else {
-        // Fallback for desktop browsers
-        navigator.clipboard.writeText(text);
-        alert("Rankings and Game URL copied to clipboard!");
+        btn.classList.add('hidden');
+    }
+
+    // Round Indicator
+    const ind = document.getElementById('roundIndicator');
+    if (['passwordScreen', 'policeScreen'].includes(id)) {
+        ind.classList.remove('hidden'); ind.classList.add('flex');
+        document.getElementById('curRnd').innerText = currentRound;
+        document.getElementById('totalRnd').innerText = totalRounds;
+    } else { ind.classList.add('hidden'); }
+    save();
+}
+function syncRounds(val) {
+    let num = parseInt(val);
+    if (isNaN(num) || num < 1) num = 1; 
+    
+    // Update variables
+    totalRounds = num;
+    
+    // Update UI elements
+    const inputField = document.getElementById('roundInput');
+    if (inputField) inputField.value = num;
+
+    const setDisp = document.getElementById('setRndDisp');
+    if (setDisp) setDisp.innerText = num;
+
+    // Save specifically to your key
+    localStorage.setItem('rr_totalRnd', num);
+    save(); 
+}
+function continueGame() {
+    // 1. Move to the Round Selection screen
+    showScreen('roundSetup');
+    
+    // 2. Clear the input so the user can type how many NEW rounds to add
+    const inputField = document.getElementById('roundInput');
+    if (inputField) {
+        inputField.value = ""; 
+        inputField.placeholder = "00";
+        inputField.focus();
     }
 }
 
-// --- GAME LOGIC ---
 function confirmRounds() {
-    totalRounds = parseInt(document.getElementById('roundInput').value) || 5;
-    showScreen('setup');
-    renderPlayerList();
-}
+    const inputVal = parseInt(document.getElementById('roundInput').value) || 5;
 
-function addPlayer() {
-    const n = document.getElementById('playerName'), p = document.getElementById('playerPass');
-    if (!n.value || p.value.length !== 2) return;
-    players.push({ name: n.value.trim().toUpperCase(), pass: p.value, score: 0, history: [], stats: {} });
-    n.value = ""; p.value = ""; renderPlayerList(); save();
+    // IF PLAYERS ALREADY EXIST = WE ARE CONTINUING
+    if (players.length > 0) {
+        totalRounds += inputVal; // Add new rounds to current total
+        currentRound++;          // Increment to next round
+        save();                  // Save new totalRounds to localStorage
+        startRound();            // Start the round immediately
+    } 
+    // IF NO PLAYERS = NEW GAME
+    else {
+        totalRounds = inputVal;
+        save();
+        showScreen('setup');     // Go to name entry (Lobby)
+    }
 }
-
-function renderPlayerList() {
-    document.getElementById('playerList').innerHTML = players.map((p, i) => `
-        <div class="bg-slate-900/60 p-4 rounded-2xl flex justify-between items-center border border-slate-800/50">
-            <span class="font-bold tracking-tight">👤 ${p.name}</span>
-            <button onclick="players.splice(${i}, 1); renderPlayerList(); save();" class="text-red-500 font-bold px-3">✕</button>
-        </div>`).join('');
-    document.getElementById('startBtn').classList.toggle('hidden', players.length < 4);
-}
-
-function startGame() { startRound(); }
+function startGame() { if (players.length < 4) return alert("Min 4 Players"); currentRound = 1; startRound(); }
 
 function startRound() {
-    let pool = ["RAJA 👑", "RANI 👸", "KAVALAN 👮", "THIRUDAN 👤"];
-    while(pool.length < players.length) pool.push("MAKKAL 👥");
-    assignedRoles = pool.sort(() => Math.random() - 0.5);
-    currentTurn = 0;
-    showScreen('passwordScreen');
-    prepareTurn();
+    currentTurn = 0; selectedSuspect = null;
+    let pool = ["👑", "👸", "👮", "👤"];
+    while(pool.length < players.length) pool.push("👥");
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    assignedRoles = pool.map(e => e === "👑" ? "RAJA 👑" : e === "👸" ? "RANI 👸" : e === "👮" ? "KAVALAN 👮" : e === "👤" ? "THIRUDAN 👤" : "MAKKAL 👥");
+    showScreen('passwordScreen'); prepareTurn();
 }
 
 function prepareTurn() {
@@ -101,176 +118,147 @@ function prepareTurn() {
     document.getElementById('turnIndicator').innerText = players[currentTurn].name;
     document.getElementById('checkPass').value = "";
 }
+
 function checkPassword() {
-    const enteredPin = document.getElementById('checkPass').value;
-    const playerPin = players[currentTurn].pass;
-
-    if (enteredPin === playerPin) {
+    if (document.getElementById('checkPass').value === players[currentTurn].pass) {
         const role = assignedRoles[currentTurn];
-        
-        // Define points based on role
-        let points = "0";
-        if (role.includes("RAJA")) points = "1000";
-        else if (role.includes("RANI")) points = "500";
-        else if (role.includes("MAKKAL")) points = "300";
-        else if (role.includes("KAVALAN") || role.includes("THIRUDAN")) points = "250";
-
-        // Update the display with Bold Points
-        document.getElementById('roleShow').innerHTML = `
-            <div class="animate-bounce mb-2">${role}</div>
-            <div class="text-xs text-slate-500 font-sans tracking-[0.2em] mb-1">BOUNTY</div>
-            <div class="text-6xl font-black text-white drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]">${points}</div>
-            <div class="text-[10px] text-yellow-500 font-bold mt-1">POINTS</div>
-        `;
-        
+        let pts = role.includes("👑") ? "1000" : role.includes("👸") ? "500" : role.includes("👥") ? "300" : "250";
+        document.getElementById('roleShow').innerHTML = `<h3 class="text-3xl font-royal text-yellow-500">${role}</h3><p class="text-6xl font-black mt-2">${pts}</p>`;
         document.getElementById('pinEntryArea').classList.add('hidden');
         document.getElementById('roleDisplayArea').classList.remove('hidden');
-        
-        if(role.includes("KAVALAN")) playSnd('sndSiren');
-        else playSnd('sndReveal');
-    } else {
-        alert("Wrong PIN!");
-        document.getElementById('checkPass').value = "";
-    }
+        if(role.includes("👮")) playSnd('sndSiren'); else playSnd('sndReveal');
+    } else { alert("WRONG PIN"); document.getElementById('checkPass').value = ""; }
 }
 
-function hideRole() {
-    stopSnd('sndSiren');
-    document.getElementById('roleDisplayArea').classList.add('hidden');
-    document.getElementById('passPhoneArea').classList.remove('hidden');
-}
-
-function nextPlayer() {
-    currentTurn++;
-    if (currentTurn < players.length) prepareTurn();
-    else startPolicePhase();
-}
+function hideRole() { stopSnd('sndSiren'); document.getElementById('roleDisplayArea').classList.add('hidden'); document.getElementById('passPhoneArea').classList.remove('hidden'); }
+function nextPlayer() { currentTurn++; if (currentTurn < players.length) prepareTurn(); else startPolicePhase(); }
 
 function startPolicePhase() {
-    showScreen('policeScreen');
-    document.getElementById('mainBody').classList.add('siren-bg');
-    playSnd('sndSiren');
-    const kIdx = assignedRoles.indexOf('KAVALAN 👮');
+    showScreen('policeScreen'); document.getElementById('mainBody').classList.add('siren-bg'); playSnd('sndSiren');
+    const kIdx = assignedRoles.findIndex(r => r.includes("👮"));
     document.getElementById('policeName').innerText = players[kIdx].name;
+    const btn = document.getElementById('arrestBtn');
+    btn.classList.add('opacity-30', 'pointer-events-none', 'bg-slate-800');
     document.getElementById('suspectContainer').innerHTML = players.map((p, i) => i === kIdx ? '' : `
-        <button onclick="handleSelect(${i}, this)" class="sus-btn w-full p-5 rounded-2xl bg-slate-900 border border-slate-800 flex justify-between items-center active:scale-95 transition-all">
-            <span class="font-bold">${p.name}</span>
-            <div class="w-5 h-5 rounded-full border-2 border-slate-700"></div>
+        <button onclick="handleSelect(${i}, this)" class="sus-btn w-full p-4 rounded-2xl bg-slate-900 border border-slate-800 flex justify-between items-center mb-2">
+            <span class="font-bold text-white uppercase">${p.name}</span>
+            <div class="w-5 h-5 rounded-full border-2 border-slate-600 status-circle"></div>
         </button>`).join('');
-    let t = 30;
-    timerInterval = setInterval(() => {
-        t--; document.getElementById('timerDisplay').innerText = t+"s";
-        if(t <= 0) { clearInterval(timerInterval); submitGuess(true); }
-    }, 1000);
+    let t = policeTimeLimit; document.getElementById('timerDisplay').innerText = t;
+    timerInterval = setInterval(() => { t--; document.getElementById('timerDisplay').innerText = t; if(t <= 0) { clearInterval(timerInterval); submitGuess(true); } }, 1000);
 }
 
 function handleSelect(idx, el) {
     selectedSuspect = idx;
-    document.querySelectorAll('.sus-btn').forEach(b => {
-        b.classList.remove('border-blue-500', 'bg-blue-900/20');
-        b.querySelector('div').classList.replace('bg-blue-500', 'bg-transparent');
-    });
-    el.classList.add('border-blue-500', 'bg-blue-900/20');
-    el.querySelector('div').classList.add('bg-blue-500');
-    document.getElementById('arrestBtn').classList.remove('opacity-20', 'pointer-events-none');
+    document.querySelectorAll('.sus-btn').forEach(b => { b.classList.remove('border-blue-500', 'bg-blue-900/30'); b.querySelector('.status-circle').classList.remove('bg-blue-500'); });
+    el.classList.add('border-blue-500', 'bg-blue-900/30'); el.querySelector('.status-circle').classList.add('bg-blue-500');
+    document.getElementById('arrestBtn').classList.remove('opacity-30', 'pointer-events-none', 'bg-slate-800');
+    document.getElementById('arrestBtn').classList.add('bg-blue-600');
 }
 
 function submitGuess(isTimeout) {
     clearInterval(timerInterval); stopSnd('sndSiren'); document.getElementById('mainBody').classList.remove('siren-bg');
-    const tIdx = assignedRoles.indexOf('THIRUDAN 👤'), kIdx = assignedRoles.indexOf('KAVALAN 👮');
-    
-    players.forEach((p, i) => {
-        const emo = assignedRoles[i].split(' ')[1];
-        if(!p.history) p.history = [];
-        p.history.push(emo);
-        p.score += assignedRoles[i].includes('RAJA') ? 1000 : assignedRoles[i].includes('RANI') ? 500 : assignedRoles[i].includes('MAKKAL') ? 300 : 0;
+    const tIdx = assignedRoles.findIndex(r => r.includes("👤")), kIdx = assignedRoles.findIndex(r => r.includes("👮"));
+    players.forEach((p, i) => { 
+        if(!p.history) p.history = []; p.history.push(assignedRoles[i].split(' ')[1]);
+        if(assignedRoles[i].includes("👑")) p.score += 1000; else if(assignedRoles[i].includes("👸")) p.score += 500; else if(assignedRoles[i].includes("👥")) p.score += 300;
     });
-
-    const win = !isTimeout && selectedSuspect === tIdx;
-    if (win) { players[kIdx].score += 250; playSnd('sndWin'); } 
-    else { players[tIdx].score += 250; playSnd('sndFail'); }
-    
+    if (!isTimeout && selectedSuspect === tIdx) { players[kIdx].score += 250; playSnd('sndWin'); showVerdict("CAUGHT! 🚓", players[tIdx].name + " was the Thief!", "👮"); }
+    else { players[tIdx].score += 250; playSnd('sndFail'); showVerdict("ESCAPED! 🎭", players[tIdx].name + " got away!", "👤"); }
     save();
-    document.getElementById('verdictTitle').innerText = win ? "ARRESTED!" : "ESCAPED!";
-    document.getElementById('verdictDesc').innerText = "THE THIEF WAS " + players[tIdx].name;
-    document.getElementById('verdictIcon').innerText = win ? "🚓" : "🎭";
-    document.getElementById('verdictOverlay').classList.remove('hidden');
 }
 
-function closeVerdict() {
-    document.getElementById('verdictOverlay').classList.add('hidden');
-    if (currentRound >= totalRounds) showCelebration();
-    else { currentRound++; startRound(); }
+function showVerdict(t, d, i) { 
+    document.getElementById('verdictTitle').innerText = t; document.getElementById('verdictDesc').innerText = d; 
+    document.getElementById('verdictIcon').innerText = i; document.getElementById('verdictOverlay').classList.remove('hidden'); 
+}
+
+function closeVerdict() { 
+    document.getElementById('verdictOverlay').classList.add('hidden'); 
+    if (currentRound < totalRounds) { currentRound++; startRound(); } else showCelebration(); 
 }
 
 function showCelebration() {
     showScreen('celebrationScreen');
-    confetti({ particleCount: 200, spread: 100, origin: { y: 0.8 } });
-    
-    const sorted = [...players].sort((a,b) => b.score - a.score);
-    document.getElementById('podium').innerHTML = `
-        <div class="space-y-3 mb-8">
-            ${sorted.map((p, i) => `
-                <div class="bg-slate-900/80 p-5 rounded-3xl border ${i===0?'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]':'border-slate-800'} flex justify-between items-center">
-                    <span class="font-royal text-sm">${i+1}. ${p.name}</span>
-                    <span class="text-yellow-500 font-bold font-mono">${p.score} PTS</span>
-                </div>
-            `).join('')}
-        </div>
+    confetti({ 
+        particleCount: 150, 
+        spread: 70, 
+        origin: { y: 0.6 },
+        colors: ['#eab308', '#ffffff', '#3b82f6']
+    });
+
+    const winners = [...players].sort((a, b) => b.score - a.score);
+
+    document.getElementById('podium').innerHTML = winners.map((p, i) => {
+        const isFirst = i === 0;
+        const rankColor = isFirst ? 'bg-yellow-500 text-black' : 'bg-slate-800 text-slate-400';
         
-        <div class="grid grid-cols-1 gap-3 mt-6">
-            <button onclick="continueWithSamePlayers()" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-lg">
-                Add More Rounds (Keep Points) ➕
-            </button>
-            
-            <button onclick="resetPointsOnly()" class="w-full bg-slate-800 text-white font-black py-5 rounded-2xl uppercase text-xs border border-slate-700 shadow-lg">
-                Clear Points (Same Players) 🔄
-            </button>
+        return `
+        <div class="podium-item ${isFirst ? 'winner-glow bg-yellow-500/10' : 'bg-slate-900/50'} p-4 rounded-[2rem] border border-white/5 mb-3 flex items-center justify-between" style="animation-delay: ${i * 0.1}s">
+            <div class="flex items-center gap-4">
+                <div class="rank-badge ${rankColor}">${i + 1}</div>
+                
+                <div>
+                    <h4 class="font-black text-white uppercase text-sm tracking-tight">${p.name}</h4>
+                    <div class="flex gap-1 mt-1">
+                        ${p.history.slice(-6).map(h => `<span class="history-dot">${h}</span>`).join('')}
+                    </div>
+                </div>
+            </div>
 
-            <button onclick="goToPlayerEntry()" class="w-full bg-slate-800 text-white font-black py-5 rounded-2xl uppercase text-xs border border-slate-700 shadow-lg">
-                Change Players 👤
-            </button>
-
-            <button onclick="fullReset()" class="w-full bg-red-900/20 text-red-500 font-black py-4 rounded-2xl uppercase text-[10px] border border-red-900/30">
-                Full System Restart ⚠️
-            </button>
+            <div class="text-right">
+                <span class="text-[10px] font-black text-slate-500 uppercase block leading-none mb-1">Total Points</span>
+                <span class="text-2xl font-black ${isFirst ? 'text-yellow-500' : 'text-white'}">${p.score}</span>
+            </div>
         </div>
-    `;
+        `;
+    }).join('');
 }
 
-// 1. Add More Rounds (Scenario: Keep players and scores, just add rounds)
-function continueWithSamePlayers() {
-    let extra = prompt("How many more rounds to add?", "5");
-    if (extra) {
-        totalRounds += parseInt(extra);
-        currentRound++; // Move to the next round number
-        startRound();
-    }
+function addPlayer() {
+    const n = document.getElementById('playerName'), p = document.getElementById('playerPass');
+    if (!n.value || p.value.length !== 2) return alert("Need Name & 2-Digit PIN");
+    players.push({ name: n.value.trim().toUpperCase(), pass: p.value, score: 0, history: [] });
+    n.value = ""; p.value = ""; renderPlayerList(); save();
 }
 
-// 2. Clear Points (Scenario: Same players, but scores back to zero)
-function resetPointsOnly() {
-    if(confirm("Keep players but reset all scores to 0?")) {
-        players.forEach(p => { p.score = 0; p.history = []; });
-        save();
-        currentRound = 1;
-        showScreen('roundSetup'); // Go back to set rounds
-    }
+function renderPlayerList() {
+    // Update the counter
+    const counter = document.getElementById('playerCount');
+    if(counter) counter.innerText = players.length;
+
+    document.getElementById('playerList').innerHTML = players.map((p, i) => `
+        <div class="bg-slate-900/60 p-3 rounded-xl flex justify-between items-center border border-slate-800 mb-2">
+            <span class="font-bold text-xs text-white uppercase ml-2">${p.name}</span>
+            <button onclick="removePlayer(${i})" class="text-red-500 px-3 py-1">✕</button>
+        </div>
+    `).join('');
+    
+    document.getElementById('startBtn').classList.toggle('hidden', players.length < 4);
 }
 
-// 3. Player Entry Place (Scenario: Keep points/settings but add/remove people)
-function goToPlayerEntry() {
-    showScreen('setup');
-    renderPlayerList();
+function removePlayer(i) { players.splice(i, 1); renderPlayerList(); save(); }
+function openLedger() {
+    document.getElementById('ledgerModal').classList.remove('hidden');
+    const sorted = [...players].sort((a,b) => b.score - a.score);
+    document.getElementById('ledgerContent').innerHTML = sorted.map(p => `<div class="bg-slate-900 p-4 rounded-3xl mb-3"><div class="flex justify-between font-black"><span>${p.name}</span><span class="text-yellow-500">${p.score}</span></div><div class="flex gap-1 mt-2">${p.history.map(h=>`<span>${h}</span>`).join('')}</div></div>`).join('');
+}
+function closeLedger() { document.getElementById('ledgerModal').classList.add('hidden'); }
+function toggleSettings() { document.getElementById('settingsModal').classList.toggle('hidden'); document.getElementById('setRndDisp').innerText = totalRounds; }
+function adjRnd(v) { totalRounds = Math.max(1, totalRounds + v); document.getElementById('setRndDisp').innerText = totalRounds; save(); }
+function toggleSound() { soundEnabled = !soundEnabled; document.getElementById('soundStatusLabel').innerText = soundEnabled ? "ON 🔊" : "OFF 🔇"; save(); }
+function resetScoresOnly() { if(confirm("Reset scores?")) { players.forEach(p => { p.score = 0; p.history = []; }); currentRound = 1; save(); location.reload(); } }
+function fullReset() { if(confirm("Wipe all?")) { localStorage.clear(); location.reload(); } }
+function quitToLobby() { if(confirm("Quit to lobby?")) { closeLedger(); showScreen('setup'); } }
+
+// Add these functions to the bottom of script.js
+function jumpTimer(val) {
+    policeTimeLimit += val;
+    // Keep it between 30 and 120
+    if (policeTimeLimit < 30) policeTimeLimit = 30;
+    if (policeTimeLimit > 120) policeTimeLimit = 120;
+    
+    document.getElementById('setTimerDisp').innerText = policeTimeLimit;
+    save(); // This ensures the setting is remembered next time you play
 }
 
-function showScreen(id) {
-    ['roundSetup', 'setup', 'passwordScreen', 'policeScreen', 'celebrationScreen'].forEach(s => document.getElementById(s).classList.add('hidden'));
-    document.getElementById(id).classList.remove('hidden');
-}
-
-// Service Worker for Offline
-if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }
-
-// Bootstrap
-window.onload = () => { if(players.length > 0) { showScreen('setup'); renderPlayerList(); } };

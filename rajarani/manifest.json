@@ -1,6 +1,7 @@
 {
-  "name": "Raja Rani Empire",
+  "name": "Raja Rani",
   "short_name": "RajaRani",
+  "description": "The ultimate Raja Rani local multiplayer game.",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#020617",
