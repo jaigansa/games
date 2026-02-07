@@ -1,6 +1,6 @@
 # Web Based games Our learning purpose .
 
 ## Try this Games 
-# [APPS](https://jaigansa.github.io/webgames)
+# [Games](https://jaigansa.github.io/games)
 
 enjoy!!!
