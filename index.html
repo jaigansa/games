@@ -3,126 +3,218 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Web Apps</title>
+    <title>Game Portal | Play Now</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Bootstrap Icons -->
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <style>
         :root {
-            --bg-base: #24273a;
-            --bg-surface: #1e2030;
-            --border-color: #363a4f;
-            --text-main: #cad3f5;
-            --text-muted: #b8c0e0;
-            --accent: #8aadf4;
-            --accent-alt: #a6da95;
-            --accent-soft: #b7bdf8;
-            --radius: 18px;
+            --bg-dark: #020617;
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-primary: #38bdf8;
+            --accent-secondary: #818cf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
             margin: 0;
-            background: var(--bg-base);
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
             color: var(--text-main);
-            font-family: system-ui, sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1000px;
             margin: auto;
-            padding: 40px 20px;
+            padding: 60px 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .logo-icon {
+            font-size: 48px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 16px;
+            display: inline-block;
         }
 
         .section-title {
-            text-align: center;
-            font-size: 36px;
-            margin-bottom: 35px;
-            color: var(--accent-soft);
-            animation: fadeIn 0.8s ease;
+            font-size: clamp(32px, 8vw, 48px);
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to bottom, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section-subtitle {
+            color: var(--text-muted);
+            font-size: 16px;
+            margin-top: 12px;
         }
 
         /* GRID */
         .webapp-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 22px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
         }
 
         /* CARD */
         .webapp-card {
-            background: var(--bg-surface);
-            padding: 22px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            transition: 0.35s ease;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-            animation: fadeUp 0.6s ease both;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 32px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--glass-border);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: fadeInUp 0.6s ease-out both;
+        }
+
+        .webapp-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 100%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 0;
+            pointer-events: none;
         }
 
         .webapp-card:hover {
-            transform: translateY(-6px);
-            border-color: var(--accent);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            transform: translateY(-8px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
 
-        .webapp-card__icon {
-            font-size: 32px;
-            color: var(--accent);
-            margin-bottom: 12px;
-            display: block;
+        .webapp-card:hover::before {
+            opacity: 0.05;
+        }
+
+        .webapp-card__content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .webapp-card__icon-wrapper {
+            width: 64px;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            font-size: 28px;
+            color: var(--accent-primary);
+            transition: transform 0.4s ease;
+        }
+
+        .webapp-card:hover .webapp-card__icon-wrapper {
+            transform: rotate(-10deg) scale(1.1);
+            background: rgba(56, 189, 248, 0.1);
         }
 
         .webapp-card__title {
-            font-size: 20px;
-            font-weight: 600;
-            margin: 0 0 8px;
-            color: var(--accent-soft);
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 12px;
+            color: #fff;
         }
 
         .webapp-card__desc {
-            font-size: 14px;
-            margin: 0 0 18px;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 0 0 32px;
             color: var(--text-muted);
+            flex-grow: 1;
+        }
+
+        .webapp-card__footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .webapp-card__btn {
-            background: var(--accent);
-            padding: 9px 14px;
-            border-radius: var(--radius);
+            background: #fff;
+            padding: 12px 28px;
+            border-radius: 14px;
             text-decoration: none;
-            color: #1e2030;
-            font-weight: 600;
-            transition: 0.25s ease;
-            display: inline-block;
+            color: #000;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .webapp-card__btn:hover {
-            background: var(--accent-alt);
+            background: var(--accent-primary);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+        }
+
+        .status-badge {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent-primary);
         }
 
         /* Animations */
-        @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(15px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-            to {
-                opacity: 1;
-            }
+        @media (max-width: 640px) {
+            .container { padding: 40px 20px; }
+            .webapp-grid { grid-template-columns: 1fr; }
+            .webapp-card { padding: 24px; }
         }
     </style>
 </head>
@@ -130,27 +222,34 @@
 <body>
 
     <div class="container">
-        <h1 class="section-title">Web Apps</h1>
+        <header>
+            <i class="bi bi-controller logo-icon"></i>
+            <h1 class="section-title">Game Portal</h1>
+            <p class="section-subtitle">Discover and play premium web experiences</p>
+        </header>
+        
         <div id="webappGrid" class="webapp-grid"></div>
     </div>
 
     <script>
         const webapps = [
-           
-           
             {
-                icon: "bi-receipt",
+                icon: "bi-crown-fill",
                 title: "Raja Rani",
-                desc: "Raja rani games",
+                desc: "A royal mystery game of strategy and chance. Assemble your players and claim your throne.",
                 link: "rajarani",
-                btn: "Play"
+                btn: "Play Now",
+                status: "Live",
+                available: true
             },
             {
-                icon: "bi-",
-                title: "",
-                desc: "",
-                link: "",
-                btn: "wait"
+                icon: "bi-rocket-takeoff-fill",
+                title: "Project Nebula",
+                desc: "An upcoming interstellar adventure. Stay tuned for the ultimate cosmic experience.",
+                link: "#",
+                btn: "Coming Soon",
+                status: "In Development",
+                available: false
             }
         ];
 
@@ -158,11 +257,20 @@
 
         webapps.forEach((app, index) => {
             grid.innerHTML += `
-                <div class="webapp-card" style="animation-delay:${index * 0.08}s">
-                    <i class="webapp-card__icon ${app.icon}"></i>
-                    <h3 class="webapp-card__title">${app.title}</h3>
-                    <p class="webapp-card__desc">${app.desc}</p>
-                    <a href="${app.link}" class="webapp-card__btn">${app.btn}</a>
+                <div class="webapp-card" style="animation-delay:${index * 0.1}s; ${!app.available ? 'opacity: 0.7; filter: grayscale(0.5);' : ''}">
+                    <div class="webapp-card__content">
+                        <div class="webapp-card__icon-wrapper">
+                            <i class="${app.icon}"></i>
+                        </div>
+                        <h3 class="webapp-card__title">${app.title}</h3>
+                        <p class="webapp-card__desc">${app.desc}</p>
+                        <div class="webapp-card__footer">
+                            <a href="${app.link}" class="webapp-card__btn" ${!app.available ? 'style="pointer-events: none; background: rgba(255,255,255,0.1); color: var(--text-muted);"' : ''}>
+                                ${app.btn} ${app.available ? '<i class="bi bi-arrow-right-short"></i>' : ''}
+                            </a>
+                            <span class="status-badge" style="${!app.available ? 'background: rgba(255,255,255,0.05); color: var(--text-muted);' : ''}">${app.status}</span>
+                        </div>
+                    </div>
                 </div>`;
         });
     </script>
@@ -170,4 +278,3 @@
 </body>
 
 </html>
-
